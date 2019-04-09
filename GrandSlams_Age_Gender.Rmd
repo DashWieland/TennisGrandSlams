@@ -1,0 +1,192 @@
+---
+title: "Tennis Grand Slams"
+author: "Dash Wieland"
+date: "4/8/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+## Weekly bike traffic in Seattle
+This week's #TidyTuesday dataset is bike traffic in Seattle. Interestingly, 
+this isn't geographic data-though we could add that by finding the coordinates
+of the counting stations-so instead I thought it might be interesting to
+capture the seasonality of bike traffic at different counting stations. 
+
+Start by loading the required packages and downloading the data from GitHub. 
+
+```{r load packages message=FALSE}
+suppressPackageStartupMessages(library(dplyr))
+library(lubridate)
+library(ggplot2)
+library(ggthemes)
+library(RColorBrewer)
+library(vioplot)
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+```
+
+```{r load data message=FALSE}
+player_dob <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-04-09/player_dob.csv")
+
+grand_slams <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-04-09/grand_slams.csv")
+
+grand_slam_timeline <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-04-09/grand_slam_timeline.csv")
+```
+
+
+```{r}
+gst_outcome_reduced <- grand_slam_timeline %>% 
+  mutate(outcome_reduced = case_when(outcome == "Quarterfinalist" ~ "Quarterfinalist",
+                                     outcome == "Semi-finalist" ~ "Semi-finalist",
+                                     outcome == "Finalist" ~ "Finalist",
+                                     outcome == "Won" ~ "Won", 
+                                     TRUE ~ "Left or Lost before Quarterfinals"))
+```
+
+The Australian and United States tournaments are played on hard courts, the French on clay, and Wimbledon on grass." - Wikipedia
+```{r}
+gst_outcome_reduced <- gst_outcome_reduced %>%
+  mutate(court_type = case_when(tournament == "Australian Open" ~ "Hard Court",
+                                tournament == "US Open" ~ "Hard Court",
+                                tournament == "French Open" ~ "Clay Court",
+                                tournament == "Wimbledon" ~ "Grass Court"))
+```
+
+
+```{r}
+gst_outcome_reduced <- gst_outcome_reduced %>%
+  arrange(year) %>%
+  group_by(player, court_type) %>%
+  mutate(win = case_when(outcome_reduced == "Won" ~ 1,
+                          TRUE ~ 0),
+         cum_wins = cumsum(win)) %>%
+  na.omit()
+```
+
+```{r}
+gst_outcome_top <- gst_outcome_reduced %>%
+  select(player, year, tournament, gender, outcome_reduced, court_type, cum_wins) %>%
+  mutate(total_wins = max(cum_wins)) %>%
+  filter(total_wins >5) 
+```
+
+```{r}
+player_dob_reduced <- player_dob %>%
+  select(name, date_of_birth) %>%
+  mutate(date_of_birth = year(player_dob$date_of_birth))
+```
+
+```{r}
+age_gst <- left_join(gst_outcome_top,
+                            player_dob_reduced,
+                            by = c("player" = "name"))
+```
+
+```{r}
+age_gst <- age_gst %>%
+  mutate(age_at_win = year-date_of_birth) %>%
+  select(player, tournament, gender, outcome_reduced, court_type, cum_wins, age_at_win)
+```
+
+```{r}
+age_gst_full <- left_join(gst_outcome_reduced,
+                          player_dob_reduced, 
+                          by = c("player" = "name"))
+```
+
+```{r}
+age_gst_full <- age_gst_full %>%
+  mutate(age_at_win = year-date_of_birth) %>%
+  select(player, tournament, gender, outcome_reduced, court_type, cum_wins, age_at_win) %>%
+  na.omit()
+```
+
+
+```{r}
+ggplot(data = age_gst_full,
+       aes(y = age_at_win, x = gender, fill = gender)) +
+  geom_flat_violin(position = position_nudge(x = .25, y = 0),
+                   alpha = .8) +
+  geom_point(
+    aes(y = age_at_win, color = gender),
+    position = position_jitter(width = .15),
+    size = .5,
+    alpha = 0.8
+  ) +
+  geom_boxplot(
+    width = .1,
+    guides = FALSE,
+    outlier.shape = NA,
+    alpha = 0.5
+  ) + 
+  scale_color_brewer(palette = "Set2") +
+  scale_fill_brewer(palette = "Set2") +
+  facet_grid(. ~ court_type, margins = TRUE) +
+  expand_limits(x = 3) +
+  theme(legend.position = "none",
+        plot.subtitle = element_text(
+          family = "Palatino Linotype",
+          size = 10,
+          colour = "gray24"
+        ),
+        plot.caption = element_text(
+          family = "Palatino Linotype",
+          colour = "gray24",
+          hjust = 0.97, 
+          vjust = -8
+        ),
+        axis.ticks = element_line(linetype = "blank"),
+        panel.grid.major = element_line(colour = "honeydew4",
+                                        size = 0.2),
+        panel.grid.minor = element_line(linetype = "blank"),
+        axis.title = element_text(
+          family = "Palatino Linotype",
+          size = 10,
+          face = "italic",
+          colour = "gray28",
+          hjust = 0.75
+        ),
+        axis.text = element_text(family = "Palatino Linotype",
+                                 colour = "gray28"),
+        plot.title = element_text(
+          family = "Palatino Linotype",
+          face = "bold",
+          colour = "gray28"
+        ),
+        panel.background = element_rect(fill = "honeydew3"),
+        plot.background = element_rect(fill = "honeydew3"),
+        strip.text = element_text(
+          family = "Palatino Linotype",
+          size = 10,
+          face = "bold",
+          colour = "gray28",
+          hjust = 0
+        ),
+        strip.background = element_blank(),
+        plot.margin = margin(10, 10, 5, 10)
+        ) + labs(
+          title = "Age, Gender, and Grand Slams",
+          x = NULL,
+          y = "Age at Grand Slam Win",
+          subtitle = "On all court types, female tennis players win Grand Slams slightly younger \non average than males, but also win more Grand Slams at older ages.",
+          caption = "Made by @DashWieland for #TidyTuesday"
+        )
+```
+
+```{r}
+aspect_ratio <- 2
+ggsave("grand_slams_gender_age.png", height = 5 , width = 5 * aspect_ratio)
+```
+
+
+
+
+
