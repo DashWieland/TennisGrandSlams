@@ -1,0 +1,68 @@
+---
+title: "Tennis Grand Slams"
+author: "Dash Wieland"
+date: "4/8/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+## Weekly bike traffic in Seattle
+This week's #TidyTuesday dataset is bike traffic in Seattle. Interestingly, 
+this isn't geographic data-though we could add that by finding the coordinates
+of the counting stations-so instead I thought it might be interesting to
+capture the seasonality of bike traffic at different counting stations. 
+
+Start by loading the required packages and downloading the data from GitHub. 
+
+```{r load packages message=FALSE}
+suppressPackageStartupMessages(library(dplyr))
+library(lubridate)
+library(ggplot2)
+library(RColorBrewer)
+```
+
+```{r load data message=FALSE}
+player_dob <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-04-09/player_dob.csv")
+
+grand_slams <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-04-09/grand_slams.csv")
+
+grand_slam_timeline <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-04-09/grand_slam_timeline.csv")
+```
+
+
+```{r}
+grand_slams_reduced <- grand_slams %>% 
+  select(year, grand_slam, name, gender) %>%
+  group_by(year, gender, grand_slam)  
+```
+
+```{r}
+player_dob_reduced <- player_dob %>%
+  select(name, grand_slam, date_of_birth) 
+```
+
+```{r}
+player_dob$name %in% grand_slams$name
+```
+
+```{r}
+age_slams_comb <- left_join(grand_slams_reduced,
+                            player_dob_reduced,
+                            by = c("name", "grand_slam"))
+```
+
+
+
+```{r}
+
+```
+
