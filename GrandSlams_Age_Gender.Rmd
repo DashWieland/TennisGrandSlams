@@ -101,7 +101,8 @@ age_gst_full <- left_join(gst_outcome_reduced,
 age_gst_full <- age_gst_full %>%
   mutate(age_at_win = year-date_of_birth) %>%
   select(player, tournament, gender, outcome_reduced, court_type, cum_wins, age_at_win) %>%
-  na.omit()
+  na.omit() %>%
+  filter(outcome_reduced == "Won")
 ```
 
 
@@ -168,10 +169,10 @@ ggplot(data = age_gst_full,
         strip.background = element_blank(),
         plot.margin = margin(10, 10, 5, 10)
         ) + labs(
-          title = "Age, Gender, and Grand Slams",
+          title = "Age, Gender, Court Type and Grand Slams",
           x = NULL,
           y = "Age at Grand Slam Win",
-          subtitle = "On all court types, female tennis players win Grand Slams slightly younger \non average than males, but also win more Grand Slams at older ages.",
+          subtitle = "Younger males athletes tend to win on clay and grass courts and older female athletes tend to win on \ngrass courts. Additionally, the mean age of Grand Slam winners for both males and females is 25, \nthough there is more variation in the age of female athletes.",
           caption = "Made by @DashWieland for #TidyTuesday"
         )
 ```
